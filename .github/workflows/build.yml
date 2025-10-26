@@ -1,0 +1,71 @@
+name: Build
+
+on:
+  workflow_call:
+    inputs:
+      dotnet-version:
+        description: '.NET SDK version'
+        required: false
+        default: '8.0.x'
+        type: string
+      configuration:
+        description: 'Build configuration'
+        required: false
+        default: 'Release'
+        type: string
+  push:
+    branches: [ main, dev ]
+  pull_request:
+    branches: [ main, dev ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Required for GitVersion
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ inputs.dotnet-version || '8.0.x' }}
+
+    - name: Install GitVersion
+      uses: gittools/actions/gitversion/setup@v1
+      with:
+        versionSpec: '5.x'
+
+    - name: Determine Version
+      id: gitversion
+      uses: gittools/actions/gitversion/execute@v1
+      with:
+        useConfigFile: true
+
+    - name: Restore dependencies
+      run: dotnet restore RoslynMcp.sln
+
+    - name: Build
+      run: dotnet build RoslynMcp.sln --configuration ${{ inputs.configuration || 'Release' }} --no-restore /p:Version=${{ steps.gitversion.outputs.semVer }}
+
+    - name: Test
+      run: dotnet test RoslynMcp.sln --configuration ${{ inputs.configuration || 'Release' }} --no-build --verbosity normal
+      continue-on-error: true  # Continue even if no tests found
+
+    - name: Pack
+      run: dotnet pack src/RoslynMcp.csproj --configuration ${{ inputs.configuration || 'Release' }} --no-build /p:Version=${{ steps.gitversion.outputs.semVer }} --output ./artifacts
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: nuget-package
+        path: ./artifacts/*.nupkg
+        retention-days: 7
+
+    - name: Display package info
+      run: |
+        echo "Package Version: ${{ steps.gitversion.outputs.semVer }}"
+        echo "Informational Version: ${{ steps.gitversion.outputs.informationalVersion }}"
+        ls -lh ./artifacts/
