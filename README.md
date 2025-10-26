@@ -1,6 +1,10 @@
 # Roslyn MCP Server
 
-A Model Context Protocol (MCP) stdio server that exposes Microsoft Roslyn SDK capabilities to AI coding assistants like Claude Code. Provides semantic code analysis, navigation, refactoring, and diagnostics for .NET/C# codebases.
+A Model Context Protocol (MCP) stdio server that exposes Microsoft Roslyn SDK capabilities to AI coding assistants like Claude Code. Provides **enterprise-grade** semantic code analysis, navigation, refactoring, and diagnostics for .NET/C# codebases.
+
+## 🎉 New: All Wishlist Features Complete!
+
+**19 powerful tools** including impact analysis, safe refactoring, dead code detection, interface extraction, and dependency visualization!
 
 ## Quick Start
 
@@ -20,9 +24,14 @@ claude mcp add --transport stdio roslyn \
 ## Features
 
 - **Semantic Analysis**: 100% compiler-accurate code understanding
-- **Cross-Solution Navigation**: Find references, implementations, and type hierarchies
+- **Cross-Solution Navigation**: Find references, implementations, callers, and type hierarchies
+- **Impact Analysis**: See what code calls your methods before refactoring
+- **Safe Refactoring**: Rename symbols across solution with preview mode
+- **Dead Code Detection**: Find unused types, methods, and fields
 - **Real-time Diagnostics**: Get compilation errors and warnings
 - **Symbol Search**: Search for types, methods, properties across the solution
+- **Interface Extraction**: Generate interfaces from classes for DI/testability
+- **Dependency Visualization**: Graph project dependencies and detect cycles
 - **Code Organization**: Organize usings, get method overloads, and more
 
 ## Installation
@@ -124,38 +133,98 @@ Alternatively, create a `.claude/mcp-spec.json` file in your solution root:
 | `ROSLYN_MAX_DIAGNOSTICS` | 100 | Maximum diagnostics to return |
 | `ROSLYN_INCLUDE_HIDDEN_DIAGNOSTICS` | false | Include hidden severity diagnostics |
 | `ROSLYN_PARALLEL_ANALYSIS` | true | Enable parallel project analysis |
-| `ROSLYN_TIMEOUT_SECONDS` | 30 | Operation timeout |
+| `ROSLYN_TIMEOUT_SECONDS` | 30 | Operation timeout (increase for large solutions) |
 
-## Available Tools
+### Large Solutions
 
-### Core Tools
+For solutions with 100+ projects, see **[docs/LARGE-SOLUTIONS.md](docs/LARGE-SOLUTIONS.md)** for:
+- Token limit handling strategies
+- Performance optimization tips
+- Recommended workflows
+- Tool-specific guidance
 
-1. **roslyn:load_solution** - Load a .NET solution for analysis
-2. **roslyn:get_symbol_info** - Get detailed semantic information about a symbol
-3. **roslyn:find_references** - Find all references to a symbol
-4. **roslyn:find_implementations** - Find all implementations of an interface/abstract class
-5. **roslyn:get_type_hierarchy** - Get inheritance hierarchy for a type
-6. **roslyn:search_symbols** - Search for symbols by name
-7. **roslyn:get_diagnostics** - Get compiler errors and warnings
-8. **roslyn:get_code_fixes** - Get available code fixes
-9. **roslyn:get_project_structure** - Get solution/project structure
-10. **roslyn:organize_usings** - Sort and remove unused using directives
-11. **roslyn:get_method_overloads** - Get all overloads of a method
-12. **roslyn:get_containing_member** - Get containing method/property/class info
+## Available Tools (19 Total)
+
+### Core & Health
+1. **roslyn:health_check** ⭐ - Check server health and workspace status
+2. **roslyn:load_solution** - Load a .NET solution for analysis
+3. **roslyn:get_symbol_info** - Get detailed semantic information about a symbol
+
+### Navigation
+4. **roslyn:find_references** - Find all references to a symbol
+5. **roslyn:find_implementations** - Find all implementations of an interface/abstract class
+6. **roslyn:find_callers** ⭐ - Find all methods that call a specific method (impact analysis)
+
+### Analysis & Discovery
+7. **roslyn:get_type_hierarchy** - Get inheritance hierarchy for a type
+8. **roslyn:search_symbols** - Search for symbols by name across solution
+9. **roslyn:get_diagnostics** - Get compiler errors and warnings
+10. **roslyn:find_unused_code** ⭐ - Find dead code (unused types, methods, fields)
+11. **roslyn:dependency_graph** ⭐ - Visualize project dependencies and detect cycles
+
+### Refactoring
+12. **roslyn:rename_symbol** ⭐ - Safely rename symbol across solution with preview
+13. **roslyn:extract_interface** ⭐ - Generate interface from class for DI/testability
+14. **roslyn:organize_usings** - Sort and remove unused using directives
+
+### Code Fixes & Structure
+15. **roslyn:get_code_fixes** - Get available code fixes for diagnostics
+16. **roslyn:get_project_structure** - Get solution/project structure
+17. **roslyn:get_method_overloads** - Get all overloads of a method
+18. **roslyn:get_containing_member** - Get containing method/property/class info
+
+⭐ = New tools (6 added in latest release!)
 
 ## Usage with Claude Code
 
 Once installed and configured, Claude Code will automatically use the Roslyn MCP server for:
 
-- Finding accurate references across your entire solution
+- Finding accurate references and callers across your entire solution
 - Understanding type hierarchies and implementations
+- Impact analysis before refactoring ("what will break?")
+- Safe symbol renaming with preview mode
+- Detecting and removing dead code
+- Generating interfaces from classes
+- Visualizing project dependencies
 - Navigating complex codebases
 - Getting real-time compilation diagnostics
-- Safe refactoring operations
 
 ## Example Prompts
 
 Here are some example prompts you can use with Claude Code once the MCP server is configured:
+
+**Impact Analysis (NEW):**
+```
+"Find all callers of the ProcessPayment method"
+"What code will break if I change this method signature?"
+"Who uses the CustomerRepository?"
+```
+
+**Safe Refactoring (NEW):**
+```
+"Preview renaming ICustomerRepository to IUserRepository"
+"Safely rename ProcessPayment to HandlePayment across the solution"
+```
+
+**Dead Code Detection (NEW):**
+```
+"Find all unused code in the Application project"
+"What private methods are never called?"
+"Show me unused classes in the Domain layer"
+```
+
+**Interface Extraction (NEW):**
+```
+"Extract an interface from PaymentService class"
+"Generate IPaymentService interface with ProcessPayment and RefundPayment methods"
+```
+
+**Dependency Visualization (NEW):**
+```
+"Show me the project dependency graph"
+"Are there any circular dependencies?"
+"Generate a Mermaid diagram of project dependencies"
+```
 
 **Find References:**
 ```
@@ -182,13 +251,6 @@ Here are some example prompts you can use with Claude Code once the MCP server i
 "Get all compilation errors in the solution"
 "Show me warnings in CustomerService.cs"
 "What errors are in the Payment project?"
-```
-
-**Code Analysis:**
-```
-"Get symbol information at line 45, column 10 in CustomerService.cs"
-"Show me the project structure"
-"Organize the usings in this file"
 ```
 
 ## Architecture
