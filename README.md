@@ -12,7 +12,7 @@ dotnet tool install --global --add-source ./src/bin/Release RoslynMcp
 # Add to Claude Code
 claude mcp add --transport stdio roslyn \
   --env DOTNET_SOLUTION_PATH="/path/to/your/solution.sln" \
-  -- dotnetroslyn-mcp
+  -- dotnet-roslyn-mcp
 
 # Start using with Claude Code!
 ```
@@ -45,7 +45,7 @@ dotnet pack -c Release
 dotnet tool install --global --add-source ./src/bin/Release RoslynMcp
 
 # Verify installation
-dotnetroslyn-mcp --version
+dotnet-roslyn-mcp --version
 ```
 
 ## Configuration
@@ -57,7 +57,7 @@ After installing the global tool, add it to Claude Code using the CLI:
 ```bash
 claude mcp add --transport stdio roslyn \
   --env DOTNET_SOLUTION_PATH="/path/to/your/solution.sln" \
-  -- dotnetroslyn-mcp
+  -- dotnet-roslyn-mcp
 ```
 
 Or with additional environment variables:
@@ -67,7 +67,34 @@ claude mcp add --transport stdio roslyn \
   --env DOTNET_SOLUTION_PATH="/path/to/your/solution.sln" \
   --env ROSLYN_LOG_LEVEL="Information" \
   --env ROSLYN_MAX_DIAGNOSTICS="100" \
-  -- dotnetroslyn-mcp
+  -- dotnet-roslyn-mcp
+```
+
+**Windows:**
+```bash
+claude mcp add --transport stdio roslyn ^
+  --env DOTNET_SOLUTION_PATH="C:\path\to\your\solution.sln" ^
+  --env ROSLYN_LOG_LEVEL="Information" ^
+  --env ROSLYN_MAX_DIAGNOSTICS="100" ^
+  -- dotnet-roslyn-mcp
+```
+
+### Running from Source (Development)
+
+If you want to run the MCP server directly from source without installing it globally:
+
+**Linux/macOS:**
+```bash
+claude mcp add --transport stdio roslyn \
+  --env DOTNET_SOLUTION_PATH="/path/to/your/solution.sln" \
+  -- dotnet run --project /path/to/vs-ide-mcp/src/RoslynMcp.csproj
+```
+
+**Windows:**
+```bash
+claude mcp add --transport stdio roslyn ^
+  --env DOTNET_SOLUTION_PATH="C:\path\to\your\solution.sln" ^
+  -- cmd /c dotnet run --project C:\path\to\vs-ide-mcp\src\RoslynMcp.csproj
 ```
 
 ### Manual Configuration
@@ -78,7 +105,7 @@ Alternatively, create a `.claude/mcp-spec.json` file in your solution root:
 {
   "mcpServers": {
     "roslyn": {
-      "command": "dotnetroslyn-mcp",
+      "command": "dotnet-roslyn-mcp",
       "env": {
         "DOTNET_SOLUTION_PATH": "${workspaceFolder}/YourSolution.sln"
       }
