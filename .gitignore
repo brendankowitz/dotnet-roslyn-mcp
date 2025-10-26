@@ -410,6 +410,11 @@ FodyWeavers.xsd
 # Built Visual Studio Code Extensions
 *.vsix
 
+# VSIX specific files
+**/*.vsix
+**/VSIXProject.zip
+**/extension.vsixmanifest.user
+
 # Windows Installer files from build outputs
 *.cab
 *.msi

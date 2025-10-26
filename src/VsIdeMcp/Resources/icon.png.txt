@@ -1,0 +1,14 @@
+This is a placeholder for icon.png (128x128)
+
+To create a proper icon:
+1. Create a 128x128px PNG image
+2. Use your favorite image editor (Paint.NET, GIMP, Photoshop, etc.)
+3. Save it as icon.png in this Resources folder
+4. Delete this .txt file
+
+For now, you can use a simple colored square or download an icon from:
+- https://www.flaticon.com/
+- https://icons8.com/
+- Or create one with an online tool
+
+The icon should represent the Visual Studio MCP Server (e.g., VS logo + connection symbol)
