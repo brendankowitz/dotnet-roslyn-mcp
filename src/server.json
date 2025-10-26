@@ -2,7 +2,7 @@
   "$schema": "https://raw.githubusercontent.com/modelcontextprotocol/specification/main/schema/mcp.schema.json",
   "mcpServers": {
     "roslyn": {
-      "command": "dotnetroslyn-mcp",
+      "command": "dotnet-roslyn-mcp",
       "args": [],
       "env": {
         "DOTNET_SOLUTION_PATH": "${workspaceFolder}",
