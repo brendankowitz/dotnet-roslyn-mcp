@@ -9,10 +9,10 @@
     <!-- Global Tool Configuration -->
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>dotnet-roslyn-mcp</ToolCommandName>
-    <PackageId>RoslynMcp</PackageId>
+    <PackageId>dotnet-roslyn-mcp</PackageId>
     <Version>1.0.0</Version>
     <Authors>Brendan Kowitz</Authors>
-    <Description>A .NET-based Model Context Protocol (MCP) server providing 12 essential tools for .NET/C# code analysis, navigation, and diagnostics using Roslyn.</Description>
+    <Description>A .NET-based Model Context Protocol (MCP) server providing 24+ essential tools for .NET/C# code analysis, navigation, refactoring, diagnostics, automated code fixes, and batch operations using Roslyn.</Description>
     <PackageTags>mcp;roslyn;csharp;semantic-analysis;refactoring;claude-code;model-context-protocol;claude;ai</PackageTags>
     <RepositoryUrl>https://github.com/brendankowitz/vs-ide-mcp</RepositoryUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
