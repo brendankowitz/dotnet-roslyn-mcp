@@ -726,10 +726,20 @@ public class McpServer
 
             return CreateSuccessResponse(id, mpcResult);
         }
+        catch (SolutionNotLoadedException ex)
+        {
+            await LogAsync("Warning", $"Solution not loaded: {ex.Message}");
+            return CreateErrorResponse(id, -32002, ex.Message);
+        }
         catch (FileNotFoundException ex)
         {
             await LogAsync("Error", $"File not found: {ex.Message}");
             return CreateErrorResponse(id, -32602, $"File not found: {ex.Message}");
+        }
+        catch (DirectoryNotFoundException ex)
+        {
+            await LogAsync("Error", $"Directory not found: {ex.Message}");
+            return CreateErrorResponse(id, -32602, $"Directory not found: {ex.Message}");
         }
         catch (Exception ex)
         {

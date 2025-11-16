@@ -8,6 +8,11 @@ using Microsoft.CodeAnalysis.MSBuild;
 
 namespace RoslynMcp;
 
+public class SolutionNotLoadedException : Exception
+{
+    public SolutionNotLoadedException(string message) : base(message) { }
+}
+
 public class RoslynService
 {
     private MSBuildWorkspace? _workspace;
@@ -2359,7 +2364,7 @@ public class RoslynService
     {
         if (_solution == null)
         {
-            throw new Exception("No solution loaded. Use roslyn:discover_solutions to find available solutions, then call roslyn:load_solution to load one. Alternatively, set DOTNET_SOLUTION_PATH environment variable.");
+            throw new SolutionNotLoadedException("No solution loaded. Use roslyn:discover_solutions to find available solutions, then call roslyn:load_solution to load one. Alternatively, set DOTNET_SOLUTION_PATH environment variable.");
         }
     }
 
