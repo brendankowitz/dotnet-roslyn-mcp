@@ -2,11 +2,19 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CodeActions;
 using Microsoft.CodeAnalysis.CodeFixes;
 using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Scripting;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.FindSymbols;
 using Microsoft.CodeAnalysis.MSBuild;
+using Microsoft.CodeAnalysis.Scripting;
+using System.Text;
 
 namespace RoslynMcp;
+
+public class SolutionNotLoadedException : Exception
+{
+    public SolutionNotLoadedException(string message) : base(message) { }
+}
 
 public class RoslynService
 {
@@ -74,6 +82,141 @@ public class RoslynService
         };
     }
 
+    public Task<object> DiscoverSolutionsAsync(string searchPath, bool recursive = true)
+    {
+        if (!Directory.Exists(searchPath))
+        {
+            throw new DirectoryNotFoundException($"Directory not found: {searchPath}");
+        }
+
+        var searchOption = recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
+
+        // Search for both .sln and .slnx (new XML-based solution format)
+        var slnFiles = Directory.GetFiles(searchPath, "*.sln", searchOption);
+        var slnxFiles = Directory.GetFiles(searchPath, "*.slnx", searchOption);
+
+        var solutionFiles = slnFiles.Concat(slnxFiles)
+            .Select(path => new
+            {
+                path,
+                name = Path.GetFileName(path),
+                directory = Path.GetDirectoryName(path),
+                format = Path.GetExtension(path).ToLowerInvariant(),
+                size = new FileInfo(path).Length,
+                lastModified = new FileInfo(path).LastWriteTimeUtc
+            })
+            .OrderBy(s => s.path)
+            .ToList();
+
+        return Task.FromResult<object>(new
+        {
+            searchPath,
+            recursive,
+            solutionCount = solutionFiles.Count,
+            solutions = solutionFiles
+        });
+    }
+
+    public async Task<object> ExecuteScriptAsync(string code, List<string>? imports = null, int timeoutSeconds = 10)
+    {
+        var outputCapture = new StringWriter();
+        var originalOut = Console.Out;
+        var originalError = Console.Error;
+
+        try
+        {
+            // Redirect console output
+            Console.SetOut(outputCapture);
+            Console.SetError(outputCapture);
+
+            // Build script options with imports
+            var scriptOptions = ScriptOptions.Default
+                .WithReferences(
+                    typeof(object).Assembly,
+                    typeof(Enumerable).Assembly,
+                    typeof(List<>).Assembly,
+                    typeof(Console).Assembly
+                )
+                .WithImports(
+                    "System",
+                    "System.Collections.Generic",
+                    "System.Linq",
+                    "System.Text",
+                    "System.IO"
+                );
+
+            // Add custom imports if provided
+            if (imports != null && imports.Count > 0)
+            {
+                scriptOptions = scriptOptions.WithImports(imports);
+            }
+
+            // Execute with timeout
+            var scriptTask = CSharpScript.EvaluateAsync(code, scriptOptions);
+            var timeoutTask = Task.Delay(TimeSpan.FromSeconds(timeoutSeconds));
+
+            var completedTask = await Task.WhenAny(scriptTask, timeoutTask);
+
+            if (completedTask == timeoutTask)
+            {
+                return new
+                {
+                    success = false,
+                    error = $"Script execution timed out after {timeoutSeconds} seconds",
+                    output = outputCapture.ToString(),
+                    result = (object?)null
+                };
+            }
+
+            var result = await scriptTask;
+
+            return new
+            {
+                success = true,
+                result = result?.ToString() ?? "(null)",
+                resultType = result?.GetType().FullName ?? "null",
+                output = outputCapture.ToString(),
+                error = (string?)null
+            };
+        }
+        catch (CompilationErrorException ex)
+        {
+            return new
+            {
+                success = false,
+                error = "Compilation error",
+                diagnostics = ex.Diagnostics.Select(d => new
+                {
+                    severity = d.Severity.ToString(),
+                    message = d.GetMessage(),
+                    line = d.Location.GetLineSpan().StartLinePosition.Line,
+                    column = d.Location.GetLineSpan().StartLinePosition.Character
+                }).ToList(),
+                output = outputCapture.ToString(),
+                result = (object?)null
+            };
+        }
+        catch (Exception ex)
+        {
+            return new
+            {
+                success = false,
+                error = $"Runtime error: {ex.Message}",
+                exceptionType = ex.GetType().Name,
+                stackTrace = ex.StackTrace,
+                output = outputCapture.ToString(),
+                result = (object?)null
+            };
+        }
+        finally
+        {
+            // Restore console output
+            Console.SetOut(originalOut);
+            Console.SetError(originalError);
+            outputCapture.Dispose();
+        }
+    }
+
     public async Task<object> GetHealthCheckAsync()
     {
         if (_solution == null || _workspace == null)
@@ -81,7 +224,7 @@ public class RoslynService
             return new
             {
                 status = "Not Ready",
-                message = "No solution loaded. Call roslyn:load_solution first or set DOTNET_SOLUTION_PATH environment variable.",
+                message = "No solution loaded. Use roslyn:discover_solutions to find available solutions, then call roslyn:load_solution to load one.",
                 solution = (object?)null,
                 workspace = (object?)null
             };
@@ -2324,7 +2467,7 @@ public class RoslynService
     {
         if (_solution == null)
         {
-            throw new Exception("No solution loaded. Call roslyn:load_solution first or set DOTNET_SOLUTION_PATH environment variable.");
+            throw new SolutionNotLoadedException("No solution loaded. Use roslyn:discover_solutions to find available solutions, then call roslyn:load_solution to load one. Alternatively, set DOTNET_SOLUTION_PATH environment variable.");
         }
     }
 

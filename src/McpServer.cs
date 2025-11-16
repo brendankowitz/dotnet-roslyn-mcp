@@ -22,19 +22,28 @@ public class McpServer
     {
         await LogAsync("Information", "Roslyn MCP Server starting...");
 
-        // Auto-load solution from environment variable
+        // Auto-load solution from environment variable (optional)
         var solutionPath = Environment.GetEnvironmentVariable("DOTNET_SOLUTION_PATH");
         if (!string.IsNullOrEmpty(solutionPath))
         {
             try
             {
-                // If it's a directory, try to find a .sln file
+                // If it's a directory, try to find a solution file (.sln or .slnx)
                 if (Directory.Exists(solutionPath))
                 {
-                    var slnFiles = Directory.GetFiles(solutionPath, "*.sln");
-                    if (slnFiles.Length > 0)
+                    // Prefer .slnx (new XML format) if available, otherwise use .sln
+                    var slnxFiles = Directory.GetFiles(solutionPath, "*.slnx");
+                    if (slnxFiles.Length > 0)
                     {
-                        solutionPath = slnFiles[0];
+                        solutionPath = slnxFiles[0];
+                    }
+                    else
+                    {
+                        var slnFiles = Directory.GetFiles(solutionPath, "*.sln");
+                        if (slnFiles.Length > 0)
+                        {
+                            solutionPath = slnFiles[0];
+                        }
                     }
                 }
 
@@ -48,6 +57,10 @@ public class McpServer
             {
                 await LogAsync("Warning", $"Failed to auto-load solution: {ex.Message}");
             }
+        }
+        else
+        {
+            await LogAsync("Information", "No DOTNET_SOLUTION_PATH specified. Use roslyn:discover_solutions and roslyn:load_solution tools to load a solution dynamically.");
         }
 
         // Main event loop - read from stdin, write to stdout
@@ -154,15 +167,46 @@ public class McpServer
             (object)new
             {
                 name = "roslyn:load_solution",
-                description = "Load a .NET solution for analysis. Returns success=true with projectCount and documentCount.",
+                description = "Load a .NET solution for analysis. Supports both .sln and .slnx formats. Returns success=true with projectCount and documentCount.",
                 inputSchema = new
                 {
                     type = "object",
                     properties = new
                     {
-                        solutionPath = new { type = "string", description = "Absolute path to .sln file" }
+                        solutionPath = new { type = "string", description = "Absolute path to .sln or .slnx file" }
                     },
                     required = new[] { "solutionPath" }
+                }
+            },
+            (object)new
+            {
+                name = "roslyn:discover_solutions",
+                description = "Discover .NET solution files (.sln and .slnx) in a directory. Useful for finding available solutions to load dynamically.",
+                inputSchema = new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        searchPath = new { type = "string", description = "Directory path to search for solution files" },
+                        recursive = new { type = "boolean", description = "Search subdirectories recursively (default: true)" }
+                    },
+                    required = new[] { "searchPath" }
+                }
+            },
+            (object)new
+            {
+                name = "roslyn:execute_script",
+                description = "Execute C# code snippets using Roslyn scripting. Perfect for testing code, evaluating expressions, or running quick experiments. No solution required. Returns result, output, and any compilation/runtime errors.",
+                inputSchema = new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        code = new { type = "string", description = "C# code to execute. Can be expressions, statements, or full code blocks. Common namespaces (System, System.Linq, etc.) are pre-imported." },
+                        imports = new { type = "array", items = new { type = "string" }, description = "Optional additional namespace imports (e.g., ['System.Text.RegularExpressions', 'System.Net.Http'])" },
+                        timeoutSeconds = new { type = "integer", description = "Execution timeout in seconds (default: 10, max: 30)" }
+                    },
+                    required = new[] { "code" }
                 }
             },
             (object)new
@@ -546,6 +590,15 @@ public class McpServer
                 "roslyn:load_solution" => await _roslynService.LoadSolutionAsync(
                     arguments?["solutionPath"]?.GetValue<string>() ?? throw new Exception("solutionPath required")),
 
+                "roslyn:discover_solutions" => await _roslynService.DiscoverSolutionsAsync(
+                    arguments?["searchPath"]?.GetValue<string>() ?? throw new Exception("searchPath required"),
+                    arguments?["recursive"]?.GetValue<bool>() ?? true),
+
+                "roslyn:execute_script" => await _roslynService.ExecuteScriptAsync(
+                    arguments?["code"]?.GetValue<string>() ?? throw new Exception("code required"),
+                    arguments?["imports"]?.AsArray()?.Select(e => e?.GetValue<string>() ?? "").Where(s => !string.IsNullOrEmpty(s)).ToList(),
+                    Math.Min(arguments?["timeoutSeconds"]?.GetValue<int>() ?? 10, 30)),
+
                 "roslyn:get_symbol_info" => await _roslynService.GetSymbolInfoAsync(
                     arguments?["filePath"]?.GetValue<string>() ?? throw new Exception("filePath required"),
                     arguments?["line"]?.GetValue<int>() ?? throw new Exception("line required"),
@@ -694,10 +747,20 @@ public class McpServer
 
             return CreateSuccessResponse(id, mpcResult);
         }
+        catch (SolutionNotLoadedException ex)
+        {
+            await LogAsync("Warning", $"Solution not loaded: {ex.Message}");
+            return CreateErrorResponse(id, -32002, ex.Message);
+        }
         catch (FileNotFoundException ex)
         {
             await LogAsync("Error", $"File not found: {ex.Message}");
             return CreateErrorResponse(id, -32602, $"File not found: {ex.Message}");
+        }
+        catch (DirectoryNotFoundException ex)
+        {
+            await LogAsync("Error", $"Directory not found: {ex.Message}");
+            return CreateErrorResponse(id, -32602, $"Directory not found: {ex.Message}");
         }
         catch (Exception ex)
         {
