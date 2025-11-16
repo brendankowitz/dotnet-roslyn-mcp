@@ -74,6 +74,35 @@ public class RoslynService
         };
     }
 
+    public Task<object> DiscoverSolutionsAsync(string searchPath, bool recursive = true)
+    {
+        if (!Directory.Exists(searchPath))
+        {
+            throw new DirectoryNotFoundException($"Directory not found: {searchPath}");
+        }
+
+        var searchOption = recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
+        var solutionFiles = Directory.GetFiles(searchPath, "*.sln", searchOption)
+            .Select(path => new
+            {
+                path,
+                name = Path.GetFileName(path),
+                directory = Path.GetDirectoryName(path),
+                size = new FileInfo(path).Length,
+                lastModified = new FileInfo(path).LastWriteTimeUtc
+            })
+            .OrderBy(s => s.path)
+            .ToList();
+
+        return Task.FromResult<object>(new
+        {
+            searchPath,
+            recursive,
+            solutionCount = solutionFiles.Count,
+            solutions = solutionFiles
+        });
+    }
+
     public async Task<object> GetHealthCheckAsync()
     {
         if (_solution == null || _workspace == null)
@@ -81,7 +110,7 @@ public class RoslynService
             return new
             {
                 status = "Not Ready",
-                message = "No solution loaded. Call roslyn:load_solution first or set DOTNET_SOLUTION_PATH environment variable.",
+                message = "No solution loaded. Use roslyn:discover_solutions to find available solutions, then call roslyn:load_solution to load one.",
                 solution = (object?)null,
                 workspace = (object?)null
             };
@@ -2324,7 +2353,7 @@ public class RoslynService
     {
         if (_solution == null)
         {
-            throw new Exception("No solution loaded. Call roslyn:load_solution first or set DOTNET_SOLUTION_PATH environment variable.");
+            throw new Exception("No solution loaded. Use roslyn:discover_solutions to find available solutions, then call roslyn:load_solution to load one. Alternatively, set DOTNET_SOLUTION_PATH environment variable.");
         }
     }
 

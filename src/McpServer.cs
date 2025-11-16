@@ -22,7 +22,7 @@ public class McpServer
     {
         await LogAsync("Information", "Roslyn MCP Server starting...");
 
-        // Auto-load solution from environment variable
+        // Auto-load solution from environment variable (optional)
         var solutionPath = Environment.GetEnvironmentVariable("DOTNET_SOLUTION_PATH");
         if (!string.IsNullOrEmpty(solutionPath))
         {
@@ -48,6 +48,10 @@ public class McpServer
             {
                 await LogAsync("Warning", $"Failed to auto-load solution: {ex.Message}");
             }
+        }
+        else
+        {
+            await LogAsync("Information", "No DOTNET_SOLUTION_PATH specified. Use roslyn:discover_solutions and roslyn:load_solution tools to load a solution dynamically.");
         }
 
         // Main event loop - read from stdin, write to stdout
@@ -163,6 +167,21 @@ public class McpServer
                         solutionPath = new { type = "string", description = "Absolute path to .sln file" }
                     },
                     required = new[] { "solutionPath" }
+                }
+            },
+            (object)new
+            {
+                name = "roslyn:discover_solutions",
+                description = "Discover .NET solution (.sln) files in a directory. Useful for finding available solutions to load dynamically.",
+                inputSchema = new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        searchPath = new { type = "string", description = "Directory path to search for .sln files" },
+                        recursive = new { type = "boolean", description = "Search subdirectories recursively (default: true)" }
+                    },
+                    required = new[] { "searchPath" }
                 }
             },
             (object)new
@@ -545,6 +564,10 @@ public class McpServer
 
                 "roslyn:load_solution" => await _roslynService.LoadSolutionAsync(
                     arguments?["solutionPath"]?.GetValue<string>() ?? throw new Exception("solutionPath required")),
+
+                "roslyn:discover_solutions" => await _roslynService.DiscoverSolutionsAsync(
+                    arguments?["searchPath"]?.GetValue<string>() ?? throw new Exception("searchPath required"),
+                    arguments?["recursive"]?.GetValue<bool>() ?? true),
 
                 "roslyn:get_symbol_info" => await _roslynService.GetSymbolInfoAsync(
                     arguments?["filePath"]?.GetValue<string>() ?? throw new Exception("filePath required"),
