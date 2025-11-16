@@ -82,12 +82,18 @@ public class RoslynService
         }
 
         var searchOption = recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
-        var solutionFiles = Directory.GetFiles(searchPath, "*.sln", searchOption)
+
+        // Search for both .sln and .slnx (new XML-based solution format)
+        var slnFiles = Directory.GetFiles(searchPath, "*.sln", searchOption);
+        var slnxFiles = Directory.GetFiles(searchPath, "*.slnx", searchOption);
+
+        var solutionFiles = slnFiles.Concat(slnxFiles)
             .Select(path => new
             {
                 path,
                 name = Path.GetFileName(path),
                 directory = Path.GetDirectoryName(path),
+                format = Path.GetExtension(path).ToLowerInvariant(),
                 size = new FileInfo(path).Length,
                 lastModified = new FileInfo(path).LastWriteTimeUtc
             })

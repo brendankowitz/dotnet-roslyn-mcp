@@ -144,7 +144,7 @@ Alternatively, create a `.claude/mcp-spec.json` file in your solution root:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `DOTNET_SOLUTION_PATH` | (Optional) | Path to .sln file or directory containing it. If not set, use `roslyn:discover_solutions` and `roslyn:load_solution` tools. |
+| `DOTNET_SOLUTION_PATH` | (Optional) | Path to .sln or .slnx file, or directory containing solution files. If not set, use `roslyn:discover_solutions` and `roslyn:load_solution` tools. |
 | `ROSLYN_LOG_LEVEL` | Information | Logging level (Debug, Information, Warning, Error) |
 | `ROSLYN_ENABLE_SEMANTIC_CACHE` | true | Enable document caching |
 | `ROSLYN_MAX_DIAGNOSTICS` | 100 | Maximum diagnostics to return |
@@ -156,8 +156,8 @@ Alternatively, create a `.claude/mcp-spec.json` file in your solution root:
 
 ### Core & Health
 1. **roslyn:health_check** - Check server health and workspace status
-2. **roslyn:discover_solutions** - Discover .NET solution files in a directory (supports recursive search)
-3. **roslyn:load_solution** - Load a .NET solution for analysis
+2. **roslyn:discover_solutions** - Discover .NET solution files (.sln and .slnx) in a directory (supports recursive search)
+3. **roslyn:load_solution** - Load a .NET solution for analysis (supports both .sln and .slnx formats)
 4. **roslyn:get_symbol_info** - Get detailed semantic information about a symbol
 
 ### Navigation

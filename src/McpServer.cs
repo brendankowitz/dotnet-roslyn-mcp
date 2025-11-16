@@ -28,13 +28,22 @@ public class McpServer
         {
             try
             {
-                // If it's a directory, try to find a .sln file
+                // If it's a directory, try to find a solution file (.sln or .slnx)
                 if (Directory.Exists(solutionPath))
                 {
-                    var slnFiles = Directory.GetFiles(solutionPath, "*.sln");
-                    if (slnFiles.Length > 0)
+                    // Prefer .slnx (new XML format) if available, otherwise use .sln
+                    var slnxFiles = Directory.GetFiles(solutionPath, "*.slnx");
+                    if (slnxFiles.Length > 0)
                     {
-                        solutionPath = slnFiles[0];
+                        solutionPath = slnxFiles[0];
+                    }
+                    else
+                    {
+                        var slnFiles = Directory.GetFiles(solutionPath, "*.sln");
+                        if (slnFiles.Length > 0)
+                        {
+                            solutionPath = slnFiles[0];
+                        }
                     }
                 }
 
@@ -158,13 +167,13 @@ public class McpServer
             (object)new
             {
                 name = "roslyn:load_solution",
-                description = "Load a .NET solution for analysis. Returns success=true with projectCount and documentCount.",
+                description = "Load a .NET solution for analysis. Supports both .sln and .slnx formats. Returns success=true with projectCount and documentCount.",
                 inputSchema = new
                 {
                     type = "object",
                     properties = new
                     {
-                        solutionPath = new { type = "string", description = "Absolute path to .sln file" }
+                        solutionPath = new { type = "string", description = "Absolute path to .sln or .slnx file" }
                     },
                     required = new[] { "solutionPath" }
                 }
@@ -172,13 +181,13 @@ public class McpServer
             (object)new
             {
                 name = "roslyn:discover_solutions",
-                description = "Discover .NET solution (.sln) files in a directory. Useful for finding available solutions to load dynamically.",
+                description = "Discover .NET solution files (.sln and .slnx) in a directory. Useful for finding available solutions to load dynamically.",
                 inputSchema = new
                 {
                     type = "object",
                     properties = new
                     {
-                        searchPath = new { type = "string", description = "Directory path to search for .sln files" },
+                        searchPath = new { type = "string", description = "Directory path to search for solution files" },
                         recursive = new { type = "boolean", description = "Search subdirectories recursively (default: true)" }
                     },
                     required = new[] { "searchPath" }
