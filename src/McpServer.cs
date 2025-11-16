@@ -195,6 +195,22 @@ public class McpServer
             },
             (object)new
             {
+                name = "roslyn:execute_script",
+                description = "Execute C# code snippets using Roslyn scripting. Perfect for testing code, evaluating expressions, or running quick experiments. No solution required. Returns result, output, and any compilation/runtime errors.",
+                inputSchema = new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        code = new { type = "string", description = "C# code to execute. Can be expressions, statements, or full code blocks. Common namespaces (System, System.Linq, etc.) are pre-imported." },
+                        imports = new { type = "array", items = new { type = "string" }, description = "Optional additional namespace imports (e.g., ['System.Text.RegularExpressions', 'System.Net.Http'])" },
+                        timeoutSeconds = new { type = "integer", description = "Execution timeout in seconds (default: 10, max: 30)" }
+                    },
+                    required = new[] { "code" }
+                }
+            },
+            (object)new
+            {
                 name = "roslyn:get_symbol_info",
                 description = "Get detailed semantic information about a symbol at a specific position. IMPORTANT: Uses ZERO-BASED coordinates. If your editor shows 'Line 14, Column 5', pass line=13, column=4. Returns symbol kind, type, namespace, documentation, and location.",
                 inputSchema = new
@@ -577,6 +593,11 @@ public class McpServer
                 "roslyn:discover_solutions" => await _roslynService.DiscoverSolutionsAsync(
                     arguments?["searchPath"]?.GetValue<string>() ?? throw new Exception("searchPath required"),
                     arguments?["recursive"]?.GetValue<bool>() ?? true),
+
+                "roslyn:execute_script" => await _roslynService.ExecuteScriptAsync(
+                    arguments?["code"]?.GetValue<string>() ?? throw new Exception("code required"),
+                    arguments?["imports"]?.AsArray()?.Select(e => e?.GetValue<string>() ?? "").Where(s => !string.IsNullOrEmpty(s)).ToList(),
+                    Math.Min(arguments?["timeoutSeconds"]?.GetValue<int>() ?? 10, 30)),
 
                 "roslyn:get_symbol_info" => await _roslynService.GetSymbolInfoAsync(
                     arguments?["filePath"]?.GetValue<string>() ?? throw new Exception("filePath required"),

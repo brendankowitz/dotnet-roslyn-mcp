@@ -6,11 +6,12 @@
 
 A Model Context Protocol (MCP) stdio server that exposes Microsoft Roslyn SDK capabilities to AI coding assistants like Claude Code. Provides semantic code analysis, navigation, refactoring, and diagnostics for .NET/C# codebases.
 
-**19+ powerful tools** including dynamic solution loading, impact analysis, safe refactoring, dead code detection, automated code fixes, batch operations, and dependency visualization!
+**20+ powerful tools** including dynamic solution loading, script execution, impact analysis, safe refactoring, dead code detection, automated code fixes, batch operations, and dependency visualization!
 
 ## Features
 
 - **Dynamic Solution Loading**: Discover and load .NET solutions at runtime without pre-configuration
+- **Script Execution**: Execute C# code snippets for testing, experimentation, and validation
 - **Semantic Analysis**: 100% compiler-accurate code understanding
 - **Cross-Solution Navigation**: Find references, implementations, callers, and type hierarchies
 - **Impact Analysis**: See what code calls your methods before refactoring
@@ -152,36 +153,37 @@ Alternatively, create a `.claude/mcp-spec.json` file in your solution root:
 | `ROSLYN_PARALLEL_ANALYSIS` | true | Enable parallel project analysis |
 | `ROSLYN_TIMEOUT_SECONDS` | 30 | Operation timeout (increase for large solutions) |
 
-## Available Tools (19 Total)
+## Available Tools (20 Total)
 
 ### Core & Health
 1. **roslyn:health_check** - Check server health and workspace status
 2. **roslyn:discover_solutions** - Discover .NET solution files (.sln and .slnx) in a directory (supports recursive search)
 3. **roslyn:load_solution** - Load a .NET solution for analysis (supports both .sln and .slnx formats)
-4. **roslyn:get_symbol_info** - Get detailed semantic information about a symbol
+4. **roslyn:execute_script** - Execute C# code snippets for testing and experimentation (no solution required)
+5. **roslyn:get_symbol_info** - Get detailed semantic information about a symbol
 
 ### Navigation
-5. **roslyn:find_references** - Find all references to a symbol
-6. **roslyn:find_implementations** - Find all implementations of an interface/abstract class
-7. **roslyn:find_callers** - Find all methods that call a specific method (impact analysis)
+6. **roslyn:find_references** - Find all references to a symbol
+7. **roslyn:find_implementations** - Find all implementations of an interface/abstract class
+8. **roslyn:find_callers** - Find all methods that call a specific method (impact analysis)
 
 ### Analysis & Discovery
-8. **roslyn:get_type_hierarchy** - Get inheritance hierarchy for a type
-9. **roslyn:search_symbols** - Search for symbols by name across solution
-10. **roslyn:get_diagnostics** - Get compiler errors and warnings
-11. **roslyn:find_unused_code** - Find dead code (unused types, methods, fields)
-12. **roslyn:dependency_graph** - Visualize project dependencies and detect cycles
+9. **roslyn:get_type_hierarchy** - Get inheritance hierarchy for a type
+10. **roslyn:search_symbols** - Search for symbols by name across solution
+11. **roslyn:get_diagnostics** - Get compiler errors and warnings
+12. **roslyn:find_unused_code** - Find dead code (unused types, methods, fields)
+13. **roslyn:dependency_graph** - Visualize project dependencies and detect cycles
 
 ### Refactoring
-13. **roslyn:rename_symbol** - Safely rename symbol across solution with preview
-14. **roslyn:extract_interface** - Generate interface from class for DI/testability
-15. **roslyn:organize_usings** - Sort and remove unused using directives
+14. **roslyn:rename_symbol** - Safely rename symbol across solution with preview
+15. **roslyn:extract_interface** - Generate interface from class for DI/testability
+16. **roslyn:organize_usings** - Sort and remove unused using directives
 
 ### Code Fixes & Structure
-16. **roslyn:get_code_fixes** - Get available code fixes for diagnostics
-17. **roslyn:get_project_structure** - Get solution/project structure
-18. **roslyn:get_method_overloads** - Get all overloads of a method
-19. **roslyn:get_containing_member** - Get containing method/property/class info
+17. **roslyn:get_code_fixes** - Get available code fixes for diagnostics
+18. **roslyn:get_project_structure** - Get solution/project structure
+19. **roslyn:get_method_overloads** - Get all overloads of a method
+20. **roslyn:get_containing_member** - Get containing method/property/class info
 
 ## Example Prompts
 
@@ -193,6 +195,14 @@ Here are some example prompts you can use with Claude Code once the MCP server i
 "Discover all solutions in /home/user/projects"
 "Load the solution at /home/user/projects/MyApp.sln"
 "What solutions are available in this workspace?"
+```
+
+**Script Execution:**
+```
+"Test if this LINQ expression works: Enumerable.Range(1, 10).Where(x => x % 2 == 0)"
+"Execute this code and show the output: Console.WriteLine(DateTime.Now.ToString())"
+"Validate this regex pattern: new Regex(@\"^[a-z]+$\").IsMatch(\"hello\")"
+"Check if this algorithm works correctly: [paste code snippet]"
 ```
 
 **Impact Analysis:**

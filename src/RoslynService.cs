@@ -2,9 +2,12 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CodeActions;
 using Microsoft.CodeAnalysis.CodeFixes;
 using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Scripting;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.FindSymbols;
 using Microsoft.CodeAnalysis.MSBuild;
+using Microsoft.CodeAnalysis.Scripting;
+using System.Text;
 
 namespace RoslynMcp;
 
@@ -112,6 +115,106 @@ public class RoslynService
             solutionCount = solutionFiles.Count,
             solutions = solutionFiles
         });
+    }
+
+    public async Task<object> ExecuteScriptAsync(string code, List<string>? imports = null, int timeoutSeconds = 10)
+    {
+        var outputCapture = new StringWriter();
+        var originalOut = Console.Out;
+        var originalError = Console.Error;
+
+        try
+        {
+            // Redirect console output
+            Console.SetOut(outputCapture);
+            Console.SetError(outputCapture);
+
+            // Build script options with imports
+            var scriptOptions = ScriptOptions.Default
+                .WithReferences(
+                    typeof(object).Assembly,
+                    typeof(Enumerable).Assembly,
+                    typeof(List<>).Assembly,
+                    typeof(Console).Assembly
+                )
+                .WithImports(
+                    "System",
+                    "System.Collections.Generic",
+                    "System.Linq",
+                    "System.Text",
+                    "System.IO"
+                );
+
+            // Add custom imports if provided
+            if (imports != null && imports.Count > 0)
+            {
+                scriptOptions = scriptOptions.WithImports(imports);
+            }
+
+            // Execute with timeout
+            var scriptTask = CSharpScript.EvaluateAsync(code, scriptOptions);
+            var timeoutTask = Task.Delay(TimeSpan.FromSeconds(timeoutSeconds));
+
+            var completedTask = await Task.WhenAny(scriptTask, timeoutTask);
+
+            if (completedTask == timeoutTask)
+            {
+                return new
+                {
+                    success = false,
+                    error = $"Script execution timed out after {timeoutSeconds} seconds",
+                    output = outputCapture.ToString(),
+                    result = (object?)null
+                };
+            }
+
+            var result = await scriptTask;
+
+            return new
+            {
+                success = true,
+                result = result?.ToString() ?? "(null)",
+                resultType = result?.GetType().FullName ?? "null",
+                output = outputCapture.ToString(),
+                error = (string?)null
+            };
+        }
+        catch (CompilationErrorException ex)
+        {
+            return new
+            {
+                success = false,
+                error = "Compilation error",
+                diagnostics = ex.Diagnostics.Select(d => new
+                {
+                    severity = d.Severity.ToString(),
+                    message = d.GetMessage(),
+                    line = d.Location.GetLineSpan().StartLinePosition.Line,
+                    column = d.Location.GetLineSpan().StartLinePosition.Character
+                }).ToList(),
+                output = outputCapture.ToString(),
+                result = (object?)null
+            };
+        }
+        catch (Exception ex)
+        {
+            return new
+            {
+                success = false,
+                error = $"Runtime error: {ex.Message}",
+                exceptionType = ex.GetType().Name,
+                stackTrace = ex.StackTrace,
+                output = outputCapture.ToString(),
+                result = (object?)null
+            };
+        }
+        finally
+        {
+            // Restore console output
+            Console.SetOut(originalOut);
+            Console.SetError(originalError);
+            outputCapture.Dispose();
+        }
     }
 
     public async Task<object> GetHealthCheckAsync()
